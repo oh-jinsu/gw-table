@@ -1,0 +1,62 @@
+{
+  "name": "gw-table",
+  "version": "0.1.0",
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.js",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./prosemirror": {
+      "types": "./dist/prosemirror/index.d.ts",
+      "import": "./dist/prosemirror/index.mjs",
+      "require": "./dist/prosemirror/index.js"
+    }
+  },
+  "scripts": {
+    "build": "NODE_OPTIONS='--max-old-space-size=16384' tsup",
+    "dev": "tsup --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oh-jinsu/gw-table.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/oh-jinsu/gw-table/issues"
+  },
+  "homepage": "https://github.com/oh-jinsu/gw-table#readme",
+  "description": "",
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tsup": "^8.5.1",
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "^0.45.2",
+    "react": "^19",
+    "react-dom": "^19",
+    "react-router": "^7.13.1"
+  },
+  "dependencies": {
+    "highlight.js": "^11.11.1",
+    "html-entities": "^2.6.0",
+    "prosemirror-commands": "^1.7.1",
+    "prosemirror-highlightjs": "^0.9.1",
+    "prosemirror-history": "^1.5.0",
+    "prosemirror-keymap": "^1.2.3",
+    "prosemirror-model": "^1.25.4",
+    "prosemirror-schema-list": "^1.5.1",
+    "prosemirror-state": "^1.4.4",
+    "prosemirror-view": "^1.41.3",
+    "react-icons": "^5.6.0",
+    "rxjs": "^7.8.2"
+  }
+}
