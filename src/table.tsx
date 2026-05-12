@@ -8,26 +8,26 @@ import type {
 import { GoArrowDown, GoArrowUp } from "react-icons/go";
 import { Link, useSearchParams } from "react-router";
 
-export type TableColumnProps<T> =
+export type TableColumnProps<TModel, TKey extends keyof TModel> =
   | ReactNode
   | {
       label: ReactNode;
-      mapper?: (item: T) => ReactNode;
-      sort?: (a: T, b: T) => number;
+      mapper?: (value: TModel[TKey], item: TModel) => ReactNode;
+      sort?: (a: TModel, b: TModel) => number;
     };
 
-export type TableColumnOptions<T> = {
-  [key in string]?: TableColumnProps<T>;
+export type TableColumnOptions<TModel> = {
+  [K in keyof TModel]?: TableColumnProps<TModel, K>;
 };
 
-export type OrderedTableProps<T> = DetailedHTMLProps<
+export type OrderedTableProps<TModel> = DetailedHTMLProps<
   TableHTMLAttributes<HTMLTableElement>,
   HTMLTableElement
 > & {
-  data: T[];
-  columns: TableColumnOptions<T>;
-  mapper?: FC<{ item: T; index: number; children: ReactNode }>;
-  getLink?: (item: T) => string;
+  data: TModel[];
+  columns: TableColumnOptions<TModel>;
+  mapper?: FC<{ item: TModel; index: number; children: ReactNode }>;
+  getLink?: (item: TModel) => string;
   limit?: number;
   offset?: number;
   orderBy?: string;
@@ -37,7 +37,7 @@ export type OrderedTableProps<T> = DetailedHTMLProps<
   };
 };
 
-export function Table<T>({
+export function Table<TModel>({
   className = "min-w-full whitespace-nowrap",
   data,
   columns,
@@ -48,7 +48,7 @@ export function Table<T>({
   orderBy,
   direction,
   filters,
-}: OrderedTableProps<T>) {
+}: OrderedTableProps<TModel>) {
   const keys = Object.entries(columns)
     .filter((entry) => entry[1])
     .map(([key]) => key);
@@ -64,7 +64,7 @@ export function Table<T>({
       <thead>
         <tr>
           {keys.map((key) => {
-            const value = columns[key as keyof TableColumnOptions<T>];
+            const value = columns[key as keyof TableColumnOptions<TModel>];
 
             function getReactNode() {
               if (value && typeof value === "object" && "label" in value) {
@@ -136,7 +136,8 @@ export function Table<T>({
                     >
                       <option value="">전체</option>
                       {filter.map((option) => {
-                        const column = columns[key];
+                        const column =
+                          columns[key as keyof TableColumnOptions<TModel>];
 
                         if (
                           column &&
@@ -146,7 +147,7 @@ export function Table<T>({
                           const mapper = column.mapper;
 
                           if (mapper) {
-                            const label = mapper({} as T);
+                            const label = mapper(option as any, {} as TModel);
 
                             if (typeof label === "string") {
                               return (
@@ -192,11 +193,12 @@ export function Table<T>({
         {sortedArray.map((item, i) => (
           <tr key={i} className="hover:bg-gray-50 transition-colors">
             {keys.map((key, i) => {
-              const value = (item as any)[key] as TableColumnProps<T>;
+              const value = (item as any)[key] as any;
 
               function Content() {
                 if (key in columns) {
-                  const column = columns[key as keyof TableColumnOptions<T>];
+                  const column =
+                    columns[key as keyof TableColumnOptions<TModel>];
 
                   if (
                     column &&
@@ -206,7 +208,7 @@ export function Table<T>({
                     const mapper = column.mapper;
 
                     if (mapper) {
-                      return <>{mapper(item)}</>;
+                      return <>{mapper(value, item)}</>;
                     }
                   }
                 }
