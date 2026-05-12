@@ -8,28 +8,38 @@ import type {
 import { GoArrowDown, GoArrowUp } from "react-icons/go";
 import { Link, useSearchParams } from "react-router";
 
-export type TableColumnProps<TModel, TKey extends keyof TModel> =
-  | ReactNode
-  | {
-      label: ReactNode;
-      mapper?: (value: TModel[TKey], item: TModel) => ReactNode;
-      sort?: (a: TModel, b: TModel) => number;
-    };
-
-export type TableColumnOptions<TModel> = {
-  [K in keyof TModel]?: TableColumnProps<TModel, K>;
+export type TableColumn<TModel, TKey extends keyof TModel> = {
+  head?: ReactNode;
+  key?: TKey;
+  render?: (value: TModel[TKey], item: TModel) => ReactNode;
+  sort?: (a: TModel, b: TModel) => number;
 };
 
-export type OrderedTableProps<TModel> = DetailedHTMLProps<
+export function column<TModel, TKey extends keyof TModel>(
+  options:
+    | {
+        key: TKey;
+        head?: ReactNode;
+        render?: (value: TModel[TKey], item: TModel) => ReactNode;
+        sort?: (a: TModel, b: TModel) => number;
+      }
+    | {
+        head?: ReactNode;
+        render?: (value: TModel[TKey], item: TModel) => ReactNode;
+        sort?: (a: TModel, b: TModel) => number;
+      },
+): TableColumn<TModel, TKey> {
+  return options;
+}
+
+export type TableProps<TModel> = DetailedHTMLProps<
   TableHTMLAttributes<HTMLTableElement>,
   HTMLTableElement
 > & {
   data: TModel[];
-  columns: TableColumnOptions<TModel>;
-  mapper?: FC<{ item: TModel; index: number; children: ReactNode }>;
+  columns: TableColumn<TModel, any>[];
+  render?: FC<{ item: TModel; index: number; children: ReactNode }>;
   getLink?: (item: TModel) => string;
-  limit?: number;
-  offset?: number;
   orderBy?: string;
   direction?: string;
   filters?: {
@@ -41,14 +51,11 @@ export function Table<TModel>({
   className = "min-w-full whitespace-nowrap",
   data,
   columns,
-  mapper: Mapper,
   getLink,
-  limit,
-  offset,
   orderBy,
   direction,
   filters,
-}: OrderedTableProps<TModel>) {
+}: TableProps<TModel>) {
   const keys = Object.entries(columns)
     .filter((entry) => entry[1])
     .map(([key]) => key);
@@ -64,53 +71,105 @@ export function Table<TModel>({
       <thead>
         <tr>
           {keys.map((key) => {
-            const value = columns[key as keyof TableColumnOptions<TModel>];
+            const column = columns.find((col) => col.key === key);
 
-            function getReactNode() {
-              if (value && typeof value === "object" && "label" in value) {
-                return value.label;
+            function Content() {
+              if (column && typeof column === "object" && "head" in column) {
+                return column.head;
               }
 
-              return value as ReactNode;
+              return <></>;
             }
 
             function Head() {
-              const reactNode = getReactNode();
+              return (
+                <button
+                  className={cn(
+                    orderBy === key
+                      ? "text-gray-900 font-medium"
+                      : "text-gray-500 font-medium",
+                    "px-4 flex w-full",
+                  )}
+                  onClick={() => {
+                    let newDirection = "asc";
+                    if (orderBy === key) {
+                      newDirection = direction === "asc" ? "desc" : "asc";
+                    }
+                    setSearchParams({
+                      orderBy: key,
+                      direction: newDirection,
+                    });
+                  }}
+                >
+                  <Content />
+                  {orderBy === key && (
+                    <div className="ml-0.5">
+                      {direction === "asc" ? <GoArrowUp /> : <GoArrowDown />}
+                    </div>
+                  )}
+                </button>
+              );
+            }
 
-              if (typeof reactNode === "string") {
-                return (
-                  <button
-                    className={cn(
-                      orderBy === key
-                        ? "text-gray-900 font-medium"
-                        : "text-gray-500 font-medium",
-                      "px-4 flex w-full",
-                    )}
-                    onClick={() => {
-                      let newDirection = "asc";
-                      if (orderBy === key) {
-                        newDirection = direction === "asc" ? "desc" : "asc";
-                      }
-                      setSearchParams({
-                        orderBy: key,
-                        direction: newDirection,
+            function HeadFilter() {
+              const filter = filters?.[key];
+
+              if (!filter) {
+                return;
+              }
+
+              return (
+                <div className="px-3 mt-4">
+                  <select
+                    className="w-full h-10 px-1.5 border rounded-full outline-none"
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setSearchParams((prev) => {
+                        if (value) {
+                          prev.set(key, encodeURIComponent(value));
+                        } else {
+                          prev.delete(key);
+                        }
+
+                        return prev;
                       });
                     }}
                   >
-                    {reactNode}
-                    {orderBy === key && (
-                      <div className="ml-0.5">
-                        {direction === "asc" ? <GoArrowUp /> : <GoArrowDown />}
-                      </div>
-                    )}
-                  </button>
-                );
-              }
+                    <option value="">전체</option>
+                    {filter.map((option) => {
+                      const column = columns.find((col) => col.key === key);
 
-              return <>{reactNode}</>;
+                      function OptionContent() {
+                        if (
+                          column &&
+                          typeof column === "object" &&
+                          "render" in column
+                        ) {
+                          const render = column.render;
+
+                          if (render) {
+                            const head = render(option as any, {} as TModel);
+
+                            if (typeof head === "string") {
+                              return head;
+                            }
+                          }
+                        }
+
+                        return option as string;
+                      }
+
+                      return (
+                        <option key={option as string} value={option as string}>
+                          <OptionContent />
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              );
             }
-
-            const filter = filters?.[key];
 
             return (
               <th
@@ -118,62 +177,7 @@ export function Table<TModel>({
                 className={cn("py-4 border-y font-normal align-top")}
               >
                 <Head />
-                {filter && (
-                  <div className="px-3 mt-4">
-                    <select
-                      className="w-full h-10 px-1.5 border rounded-full outline-none"
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setSearchParams((prev) => {
-                          if (value) {
-                            prev.set(key, encodeURIComponent(value));
-                          } else {
-                            prev.delete(key);
-                          }
-                          return prev;
-                        });
-                      }}
-                    >
-                      <option value="">전체</option>
-                      {filter.map((option) => {
-                        const column =
-                          columns[key as keyof TableColumnOptions<TModel>];
-
-                        if (
-                          column &&
-                          typeof column === "object" &&
-                          "mapper" in column
-                        ) {
-                          const mapper = column.mapper;
-
-                          if (mapper) {
-                            const label = mapper(option as any, {} as TModel);
-
-                            if (typeof label === "string") {
-                              return (
-                                <option
-                                  key={option as string}
-                                  value={option as string}
-                                >
-                                  {label}
-                                </option>
-                              );
-                            }
-                          }
-                        }
-
-                        return (
-                          <option
-                            key={option as string}
-                            value={option as string}
-                          >
-                            {option as string}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-                )}
+                <HeadFilter />
               </th>
             );
           })}
@@ -192,54 +196,51 @@ export function Table<TModel>({
         )}
         {sortedArray.map((item, i) => (
           <tr key={i} className="hover:bg-gray-50 transition-colors">
-            {keys.map((key, i) => {
-              const value = (item as any)[key] as any;
-
+            {keys.map((key) => {
               function Content() {
-                if (key in columns) {
-                  const column =
-                    columns[key as keyof TableColumnOptions<TModel>];
+                const column = columns.find((col) => col.key === key);
 
-                  if (
-                    column &&
-                    typeof column === "object" &&
-                    "mapper" in column
-                  ) {
-                    const mapper = column.mapper;
+                const value = (item as any)[key] as any;
 
-                    if (mapper) {
-                      return <>{mapper(value, item)}</>;
-                    }
+                if (
+                  column &&
+                  typeof column === "object" &&
+                  "render" in column
+                ) {
+                  const render = column.render;
+
+                  if (render) {
+                    return <>{render(value, item)}</>;
                   }
                 }
 
                 return <>{String(value)}</>;
               }
 
-              const linkedContent = getLink ? (
-                <Link
-                  to={getLink(item)}
-                  className="block content-center px-4 w-full h-full"
-                >
-                  <Content />
-                </Link>
-              ) : (
-                <div className="px-4 w-full h-full content-center">
-                  <Content />
-                </div>
-              );
+              function ContentContainer({ children }: { children: ReactNode }) {
+                if (getLink) {
+                  return (
+                    <Link
+                      to={getLink(item)}
+                      className="block content-center px-4 w-full h-full"
+                    >
+                      {children}
+                    </Link>
+                  );
+                }
 
-              const cell = Mapper ? (
-                <Mapper item={item} index={i}>
-                  {linkedContent}
-                </Mapper>
-              ) : (
-                linkedContent
-              );
+                return (
+                  <div className="px-4 w-full h-full content-center">
+                    {children}
+                  </div>
+                );
+              }
 
               return (
                 <td key={key} className="px-0 h-14 border-b">
-                  {cell}
+                  <ContentContainer>
+                    <Content />
+                  </ContentContainer>
                 </td>
               );
             })}

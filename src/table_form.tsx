@@ -1,11 +1,11 @@
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { GoSearch } from "react-icons/go";
-import { Table, type TableColumnOptions } from "./table";
+import { Table, type TableProps } from "./table";
 import { useTable, type TableLoaderData } from "./use_table";
 import { TablePageButtons } from "./buttons";
 
 export type TablePageOptions<TModel> = {
-  columns: TableColumnOptions<TModel>;
+  columns: TableProps<TModel>["columns"];
   primaryKey?: keyof TModel;
 };
 
@@ -75,8 +75,6 @@ export function TableForm<T extends (...args: any) => any>({
         getLink={
           primaryKey ? (item) => `${pathname}/${item[primaryKey]}` : undefined
         }
-        limit={limit}
-        offset={offset}
         orderBy={orderBy}
         direction={direction}
         filters={filters}
