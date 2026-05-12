@@ -135,11 +135,41 @@ export function Table<T>({
                       }}
                     >
                       <option value="">전체</option>
-                      {filter.map((option) => (
-                        <option key={option as string} value={option as string}>
-                          {option as string}
-                        </option>
-                      ))}
+                      {filter.map((option) => {
+                        const column = columns[key];
+
+                        if (
+                          column &&
+                          typeof column === "object" &&
+                          "mapper" in column
+                        ) {
+                          const mapper = column.mapper;
+
+                          if (mapper) {
+                            const label = mapper({} as T);
+
+                            if (typeof label === "string") {
+                              return (
+                                <option
+                                  key={option as string}
+                                  value={option as string}
+                                >
+                                  {label}
+                                </option>
+                              );
+                            }
+                          }
+                        }
+
+                        return (
+                          <option
+                            key={option as string}
+                            value={option as string}
+                          >
+                            {option as string}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                 )}
