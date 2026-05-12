@@ -56,10 +56,6 @@ export function Table<TModel>({
   direction,
   filters,
 }: TableProps<TModel>) {
-  const keys = Object.entries(columns)
-    .filter((entry) => entry[1])
-    .map(([key]) => key);
-
   const sortedArray = [...data];
 
   const [_, setSearchParams] = useSearchParams();
@@ -70,8 +66,8 @@ export function Table<TModel>({
     >
       <thead>
         <tr>
-          {keys.map((key) => {
-            const column = columns.find((col) => col.key === key);
+          {columns.map((column) => {
+            const key = column.key;
 
             function Content() {
               if (column && typeof column === "object" && "head" in column) {
@@ -187,7 +183,7 @@ export function Table<TModel>({
         {sortedArray.length === 0 && (
           <tr>
             <td
-              colSpan={keys.length}
+              colSpan={columns.length}
               className="px-4 h-20 text-gray-400 text-center"
             >
               데이터가 없습니다.
@@ -196,7 +192,9 @@ export function Table<TModel>({
         )}
         {sortedArray.map((item, i) => (
           <tr key={i} className="hover:bg-gray-50 transition-colors">
-            {keys.map((key) => {
+            {columns.map((column) => {
+              const key = column.key;
+
               function Content() {
                 const column = columns.find((col) => col.key === key);
 
