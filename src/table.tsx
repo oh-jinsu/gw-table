@@ -84,7 +84,7 @@ export function Table<T>({
                       orderBy === key
                         ? "text-gray-900 font-medium"
                         : "text-gray-500 font-medium",
-                      "px-4 flex items-center w-full",
+                      "px-4 flex w-full",
                     )}
                     onClick={() => {
                       let newDirection = "asc";

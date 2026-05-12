@@ -9,48 +9,83 @@ import {
 import type { PgTableWithColumns } from "drizzle-orm/pg-core";
 import type { ColumnOf, TableRepository } from "./repository";
 
-type TableOptions<T extends PgTableWithColumns<any>> = {
-  where?: SQLWrapper;
-  searchKey?: ColumnOf<T> | ColumnOf<T>[];
-  defaultOrderBy: keyof InferSelectModel<T>;
-  defaultDirection: "asc" | "desc";
-  filters?: {
-    [key in keyof InferSelectModel<T>]?: "auto";
-  };
+export type LoadTableFiltersOption<T extends PgTableWithColumns<any>> = {
+  [key in keyof InferSelectModel<T>]?: "auto";
 };
 
-export type TableLoaderOptions<T extends PgTableWithColumns<any>, TSelect> = {
+export type LoadTableOptions<T extends PgTableWithColumns<any>, TSelect> = {
+  searchParams: URLSearchParams;
   repository: TableRepository<T, TSelect>;
-  options: TableOptions<T>;
+  where?: SQLWrapper;
+  searchKey?: ColumnOf<T> | ColumnOf<T>[];
+  defaultLimit?: number;
+  defaultOffset?: number;
+  defaultOrderBy: keyof InferSelectModel<T>;
+  defaultDirection: "asc" | "desc";
+  filters?: LoadTableFiltersOption<T>;
 };
 
 export async function loadTable<T extends PgTableWithColumns<any>, TSelect>({
-  request,
+  searchParams,
   repository,
-  options,
-}: {
-  request: Request;
-  repository: TableRepository<T, TSelect>;
-  options: TableOptions<T>;
-}) {
-  const searchParams = new URL(request.url).searchParams;
+  ...options
+}: LoadTableOptions<T, TSelect>) {
+  const limit = Number(
+    searchParams.get("limit") ?? options.defaultLimit ?? "10",
+  );
 
-  const { where, searchKey, defaultOrderBy, defaultDirection } = options;
-
-  const query = searchParams.get("query") ?? undefined;
-
-  const limit = Number(searchParams.get("limit") ?? "10");
-
-  const offset = Number(searchParams.get("offset") ?? "0");
+  const offset = Number(
+    searchParams.get("offset") ?? options.defaultOffset ?? "0",
+  );
 
   const orderBy = (searchParams.get("orderBy") ??
-    defaultOrderBy) as keyof InferSelectModel<T>;
+    options.defaultOrderBy) as keyof InferSelectModel<T>;
 
-  const direction = (searchParams.get("direction") ?? defaultDirection) as
-    | "asc"
-    | "desc";
+  const direction = (searchParams.get("direction") ??
+    options.defaultDirection) as "asc" | "desc";
 
-  const filterWhere = Object.entries(options.filters ?? {})
+  const whereClauses = collectWhereClauses(
+    searchParams,
+    repository,
+    options.where,
+    options.searchKey,
+    options.filters,
+  );
+
+  const total = await repository.countTotal({ where: whereClauses });
+
+  const items = await repository.findAll({
+    orderBy: orderBy,
+    direction: direction,
+    limit,
+    offset,
+    where: whereClauses,
+  });
+
+  const filters = await collectFilters(options.filters, repository);
+
+  return {
+    items,
+    total,
+    limit,
+    offset,
+    orderBy,
+    direction,
+    searchKey: options.searchKey,
+    filters,
+  };
+}
+
+function collectWhereClauses<T extends PgTableWithColumns<any>>(
+  searchParams: URLSearchParams,
+  repository: TableRepository<T, any>,
+  where: SQLWrapper | undefined,
+  searchKey: ColumnOf<T> | ColumnOf<T>[] | undefined,
+  filters: LoadTableFiltersOption<T> | undefined,
+) {
+  const query = searchParams.get("query") ?? undefined;
+
+  const filterWhere = Object.entries(filters ?? {})
     .map(([key, value]) => {
       const param = searchParams.get(key);
 
@@ -87,34 +122,20 @@ export async function loadTable<T extends PgTableWithColumns<any>, TSelect>({
       : undefined,
   );
 
-  const total = await repository.countTotal({ where: whereClauses });
+  return whereClauses;
+}
 
-  const items = await repository.findAll({
-    orderBy: orderBy,
-    direction: direction,
-    limit,
-    offset,
-    where: whereClauses,
-  });
-
-  const filters = Object.fromEntries(
+async function collectFilters<T extends PgTableWithColumns<any>>(
+  filters: LoadTableFiltersOption<T> | undefined,
+  repository: TableRepository<T, any>,
+) {
+  return Object.fromEntries(
     await Promise.all(
-      Object.keys(options.filters ?? {}).map(async (key) => {
+      Object.keys(filters ?? {}).map(async (key) => {
         const values = await repository.select(key);
 
         return [key, values.filter(Boolean)] as [string, unknown[]];
       }),
     ),
   );
-
-  return {
-    items,
-    total,
-    limit,
-    offset,
-    orderBy,
-    direction,
-    searchKey,
-    filters,
-  };
 }
