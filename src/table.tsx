@@ -131,7 +131,9 @@ export function Table<TModel>({
                         return prev;
                       });
                     }}
-                    defaultValue={searchParams.get(key) || ""}
+                    defaultValue={decodeURIComponent(
+                      searchParams.get(key) || "",
+                    )}
                   >
                     <option value="">전체</option>
                     {filter.map((option) => {
