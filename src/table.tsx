@@ -58,7 +58,7 @@ export function Table<TModel>({
 }: TableProps<TModel>) {
   const sortedArray = [...data];
 
-  const [_, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   return (
     <table
@@ -131,11 +131,10 @@ export function Table<TModel>({
                         return prev;
                       });
                     }}
+                    defaultValue={searchParams.get(key) || ""}
                   >
                     <option value="">전체</option>
                     {filter.map((option) => {
-                      const column = columns.find((col) => col.key === key);
-
                       function OptionContent() {
                         if (
                           column &&
