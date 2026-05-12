@@ -1,5 +1,6 @@
 import {
   and,
+  or,
   eq,
   ilike,
   type InferSelectModel,
@@ -10,7 +11,7 @@ import type { ColumnOf, TableRepository } from "./repository";
 
 type TableOptions<T extends PgTableWithColumns<any>> = {
   where?: SQLWrapper;
-  searchKey?: ColumnOf<T>;
+  searchKey?: ColumnOf<T> | ColumnOf<T>[];
   defaultOrderBy: keyof InferSelectModel<T>;
   defaultDirection: "asc" | "desc";
   filters?: {
@@ -65,14 +66,25 @@ export async function loadTable<T extends PgTableWithColumns<any>, TSelect>({
     .filter(Boolean) as SQLWrapper[];
 
   const whereClauses = and(
-    searchKey && query
-      ? ilike(
-          repository.schema[searchKey as keyof typeof repository.schema] as any,
-          `%${query}%`,
-        )
-      : undefined,
     ...filterWhere,
     where,
+    searchKey && query
+      ? Array.isArray(searchKey)
+        ? or(
+            ...searchKey.map((key) =>
+              ilike(
+                repository.schema[key as keyof typeof repository.schema] as any,
+                `%${query}%`,
+              ),
+            ),
+          )
+        : ilike(
+            repository.schema[
+              searchKey as keyof typeof repository.schema
+            ] as any,
+            `%${query}%`,
+          )
+      : undefined,
   );
 
   const total = await repository.countTotal({ where: whereClauses });
