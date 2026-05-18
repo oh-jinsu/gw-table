@@ -66,7 +66,7 @@ export function Table<TModel>({
     >
       <thead>
         <tr>
-          {columns.map((column) => {
+          {columns.map((column, i) => {
             const key = column.key;
 
             function Content() {
@@ -170,7 +170,7 @@ export function Table<TModel>({
 
             return (
               <th
-                key={key}
+                key={key || i}
                 className={cn("py-4 border-y font-normal align-top")}
               >
                 <Head />
@@ -193,7 +193,7 @@ export function Table<TModel>({
         )}
         {sortedArray.map((item, i) => (
           <tr key={i} className="hover:bg-gray-50 transition-colors">
-            {columns.map((column) => {
+            {columns.map((column, j) => {
               const key = column.key;
 
               function Content() {
@@ -236,7 +236,7 @@ export function Table<TModel>({
               }
 
               return (
-                <td key={key} className="px-0 h-14 border-b">
+                <td key={key || j} className="px-0 h-14 border-b">
                   <ContentContainer>
                     <Content />
                   </ContentContainer>
