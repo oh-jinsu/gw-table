@@ -79,7 +79,11 @@ export function Table<TModel>({
 
             function HeadContainer({ children }: { children?: ReactNode }) {
               if (!key) {
-                return <div className="px-4">{children}</div>;
+                return (
+                  <div className="px-4 text-left text-gray-500 font-medium">
+                    {children}
+                  </div>
+                );
               }
 
               return (
