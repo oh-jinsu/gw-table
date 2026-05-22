@@ -77,7 +77,11 @@ export function Table<TModel>({
               return <></>;
             }
 
-            function Head() {
+            function HeadContainer({ children }: { children?: ReactNode }) {
+              if (!key) {
+                return <div className="px-4">{children}</div>;
+              }
+
               return (
                 <button
                   className={cn(
@@ -97,7 +101,7 @@ export function Table<TModel>({
                     });
                   }}
                 >
-                  <Content />
+                  {children}
                   {orderBy === key && (
                     <div className="ml-0.5">
                       {direction === "asc" ? <GoArrowUp /> : <GoArrowDown />}
@@ -173,7 +177,9 @@ export function Table<TModel>({
                 key={key || i}
                 className={cn("py-4 border-y font-normal align-top")}
               >
-                <Head />
+                <HeadContainer>
+                  <Content />
+                </HeadContainer>
                 <HeadFilter />
               </th>
             );
@@ -196,11 +202,9 @@ export function Table<TModel>({
             {columns.map((column, j) => {
               const key = column.key;
 
+              const value = (item as any)[key] as any;
+
               function Content() {
-                const column = columns.find((col) => col.key === key);
-
-                const value = (item as any)[key] as any;
-
                 if (
                   column &&
                   typeof column === "object" &&
